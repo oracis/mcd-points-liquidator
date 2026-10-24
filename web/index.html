@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>麦麦积分清仓官 · McPoints Liquidator</title>
+<style>
+  :root{
+    --mcd-red:#DA291C; --mcd-yellow:#FFC72C; --ink:#1a1a1a;
+    --muted:#6b6b6b; --line:#e6e4df; --bg:#faf8f4; --card:#fff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 60px}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .logo{width:36px;height:36px;border-radius:9px;background:var(--mcd-red);
+    color:var(--mcd-yellow);display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:19px;flex:none}
+  h1{font-size:21px;margin:0;font-weight:650;letter-spacing:-.2px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 22px 48px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+  .alert{background:#fff5f4;border-color:#f6c9c4}
+  .alert .tag{display:inline-block;background:var(--mcd-red);color:#fff;font-size:12px;
+    padding:2px 9px;border-radius:20px;margin-bottom:10px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .stat{background:#faf8f4;border-radius:10px;padding:12px 10px}
+  .stat .k{font-size:11px;color:var(--muted);white-space:nowrap}
+  .stat .v{font-size:23px;font-weight:650;letter-spacing:-.5px;margin-top:2px}
+  .stat.risk .v{color:var(--mcd-red)}
+  .best{display:flex;justify-content:space-between;align-items:center;gap:14px;
+    background:#fffaea;border:1px solid #f3dd9a;border-radius:12px;padding:15px 18px;margin-bottom:16px}
+  .best .lbl{font-size:12px;color:#8a6b1f}
+  .best .nm{font-size:17px;font-weight:600;margin-top:2px}
+  .best .pt{font-size:22px;font-weight:650;color:var(--mcd-red);white-space:nowrap}
+  h2{font-size:15px;margin:0 0 12px;font-weight:600}
+  ul{list-style:none;margin:0;padding:0}
+  li{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:11px 0;border-bottom:1px solid #f0eee9}
+  li:last-child{border-bottom:0}
+  .nm{font-size:14px}
+  .pt{font-size:14px;font-weight:600;color:var(--mcd-red);white-space:nowrap}
+  .gap{font-size:13px;color:#8a6b6b;white-space:nowrap}
+  button{font:inherit;border:0;border-radius:9px;padding:10px 16px;cursor:pointer;
+    background:var(--mcd-red);color:#fff;font-weight:500;font-size:14px}
+  button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  button:disabled{opacity:.45;cursor:default}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px}
+  .warn{background:#fff8e6;border:1px solid #f0dfae;border-radius:10px;
+    padding:11px 14px;font-size:13px;color:#7a5c12;margin-bottom:16px}
+  canvas{display:none}
+  #shot{width:100%;border-radius:12px;border:1px solid var(--line);margin-top:14px;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">麦</div>
+    <h1>麦麦积分清仓官</h1>
+  </header>
+  <p class="sub">别让你的麦麦积分烂在账户里 · 基于麦当劳中国 MCP</p>
+
+  <div id="mockWarn" class="warn" style="display:none">
+    当前为演示模式（未设置 MCD_MCP_TOKEN），展示的是示例数据。填入 Token 后即为你的真实账户。
+  </div>
+
+  <div id="alertBox" class="card alert" style="display:none">
+    <span class="tag">清仓预警</span>
+    <div id="alertText"></div>
+  </div>
+
+  <div class="card">
+    <div class="stats">
+      <div class="stat"><div class="k">可用积分</div><div class="v" id="sBalance">–</div></div>
+      <div class="stat risk"><div class="k">即将过期</div><div class="v" id="sExpiring">–</div></div>
+      <div class="stat risk"><div class="k">已过期作废</div><div class="v" id="sExpired">–</div></div>
+      <div class="stat"><div class="k">累计积分</div><div class="v" id="sLife">–</div></div>
+    </div>
+  </div>
+
+  <div id="bestBox" class="best" style="display:none">
+    <div>
+      <div class="lbl">过期前最优兑换</div>
+      <div class="nm" id="bestName">–</div>
+    </div>
+    <div style="text-align:right">
+      <div class="pt" id="bestPt">–</div>
+      <div class="row" style="justify-content:flex-end">
+        <button id="btnRedeem">一键兑换</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>过期前还换得起（<span id="poolNum">0</span> 分内）</h2>
+    <ul id="affordList"></ul>
+    <div class="hint" id="affordHint"></div>
+  </div>
+
+  <div class="card" id="nearCard" style="display:none">
+    <h2>再攒一点点就能换</h2>
+    <ul id="nearList"></ul>
+  </div>
+
+  <div class="card">
+    <h2>生成我的积分体检卡</h2>
+    <p style="margin:0 0 12px;color:var(--muted);font-size:13px">
+      一键导出图片，分享给你的麦门搭子，看看谁的积分快烂了。
+    </p>
+    <div class="row">
+      <button id="btnCard">生成体检卡</button>
+      <button id="btnDl" class="ghost" style="display:none">下载图片</button>
+    </div>
+    <img id="shot" alt="积分体检卡">
+  </div>
+</div>
+
+<canvas id="cv" width="750" height="1000"></canvas>
+
+<script>
+let DATA = null;
+
+const $ = id => document.getElementById(id);
+
+async function load(){
+  const r = await fetch('/api/scan');
+  DATA = await r.json();
+  if (DATA._mock) $('mockWarn').style.display = 'block';
+  if (DATA._error) {
+    $('mockWarn').style.display = 'block';
+    $('mockWarn').textContent = 'MCP 调用失败：' + DATA._error + '（已回落演示数据）';
+  }
+  render();
+}
+
+function render(){
+  $('sBalance').textContent = DATA.balance.toLocaleString();
+  $('sExpiring').textContent = DATA.expiring.toLocaleString();
+  $('sExpired').textContent = (DATA.expired || 0).toLocaleString();
+  $('sLife').textContent = DATA.lifetime.toLocaleString();
+  $('poolNum').textContent = DATA.pool.toLocaleString();
+
+  const parts = [];
+  if (DATA.expired > 0){
+    parts.push('你已经白白损失了 <b>' + DATA.expired.toLocaleString() + ' 积分</b>。');
+  }
+  if (DATA.at_risk && DATA.expiring > 0){
+    parts.push('还有 <b>' + DATA.expiring.toLocaleString() +
+      ' 积分</b>即将过期，现在不换就清零了。');
+  }
+  if (parts.length){
+    $('alertBox').style.display = 'block';
+    $('alertText').innerHTML = parts.join(' ');
+  }
+
+  const ul = $('affordList');
+  ul.innerHTML = '';
+  if (!DATA.affordable.length){
+    $('affordHint').textContent = '当前池子里没有可兑换项，积分太少或商城暂无匹配商品。';
+  } else {
+    DATA.affordable.forEach(g=>{
+      const li = document.createElement('li');
+      li.innerHTML = '<span class="nm">' + esc(g.name) + '</span><span class="pt">' +
+        g.points.toLocaleString() + ' 分</span>';
+      ul.appendChild(li);
+    });
+    $('affordHint').textContent = '共检索到 ' + DATA.goods_count + ' 件可兑换商品。';
+  }
+
+  if (DATA.best_pick){
+    $('bestBox').style.display = 'flex';
+    $('bestName').textContent = DATA.best_pick.name;
+    $('bestPt').textContent = DATA.best_pick.points.toLocaleString() + ' 分';
+  }
+
+  if (DATA.near_miss && DATA.near_miss.length){
+    $('nearCard').style.display = 'block';
+    const nl = $('nearList');
+    nl.innerHTML = '';
+    DATA.near_miss.forEach(g=>{
+      const li = document.createElement('li');
+      li.innerHTML = '<span class="nm">' + esc(g.name) + '</span><span class="gap">还差 ' +
+        g.gap.toLocaleString() + ' 分</span>';
+      nl.appendChild(li);
+    });
+  }
+}
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+$('btnRedeem').onclick = async () => {
+  const btn = $('btnRedeem');
+  btn.disabled = true; btn.textContent = '兑换中…';
+  const r = await fetch('/api/redeem', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      spu_id: DATA.best_pick ? DATA.best_pick.spu_id : '',
+      spu_category: DATA.best_pick ? DATA.best_pick.spu_category : '1'
+    })
+  });
+  const j = await r.json();
+  btn.disabled = false; btn.textContent = '一键兑换';
+  alert(j.ok ? '兑换已提交：' + JSON.stringify(j.result).slice(0,200)
+             : '兑换未执行：' + (j.msg || '未知错误'));
+};
+
+$('btnCard').onclick = () => {
+  const cv = $('cv'), x = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  x.fillStyle = '#DA291C'; x.fillRect(0,0,W,H);
+  x.fillStyle = '#FFC72C'; x.fillRect(0,0,W,10);
+  x.fillStyle = '#fff'; x.font = 'bold 34px sans-serif';
+  x.fillText('我的麦麦积分体检卡', 48, 96);
+  x.font = '18px sans-serif'; x.fillStyle = '#FFD9D5';
+  x.fillText('McPoints Liquidator · 麦麦积分清仓官', 48, 132);
+
+  x.fillStyle = '#fff';
+  x.font = 'bold 120px sans-serif';
+  x.fillText((DATA.expired || 0).toLocaleString(), 48, 300);
+  x.font = '22px sans-serif'; x.fillStyle = '#FFD9D5';
+  x.fillText('积分已过期作废', 48, 340);
+
+  let y = 420;
+  x.fillStyle = 'rgba(255,255,255,.16)'; x.fillRect(48, y-38, W-96, 2);
+  const rows = [
+    ['本月将过期', (DATA.expiring || 0).toLocaleString()],
+    ['可用积分', DATA.balance.toLocaleString()],
+    ['累计积分', DATA.lifetime.toLocaleString()],
+    ['过期前可兑', DATA.affordable.length + ' 件'],
+  ];
+  rows.forEach(([k,v])=>{
+    x.font = '21px sans-serif'; x.fillStyle = '#FFD9D5'; x.fillText(k, 48, y);
+    x.fillStyle = '#fff'; x.font = 'bold 24px sans-serif';
+    x.fillText(String(v), W-48 - x.measureText(String(v)).width, y);
+    y += 58;
+  });
+
+  x.fillStyle = '#FFC72C';
+  x.font = 'bold 26px sans-serif';
+  x.fillText(DATA.at_risk ? '再不换就清零了' : '暂无过期风险', 48, y + 40);
+
+  x.fillStyle = 'rgba(255,255,255,.75)'; x.font = '17px sans-serif';
+  x.fillText('基于麦当劳中国 MCP · github.com/oracis', 48, H - 44);
+
+  const url = cv.toDataURL('image/png');
+  const img = $('shot');
+  img.src = url; img.style.display = 'block';
+  $('btnDl').style.display = 'inline-block';
+  $('btnDl').onclick = () => {
+    const a = document.createElement('a');
+    a.href = url; a.download = 'mcd-points-card.png'; a.click();
+  };
+};
+
+load();
+
+if (location.search.indexOf('card=1') >= 0) {
+  window.addEventListener('load', () => setTimeout(() => $('btnCard').onclick(), 400));
+}
+</script>
+</body>
+</html>
