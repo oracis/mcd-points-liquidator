@@ -99,6 +99,13 @@ mcd-points-liquidator/
 - **已过期与即将过期分开读**：`expiredPoint`（已作废）与 `currentMouthExpirePoint`（将过期）是两个字段，混读会把沉没成本当成待清仓库存。
 - **按类目拉取商城商品**：无参数调用会混入大量 `point=0` 的生日派对商品，项目按 `1>4` / `2` / `2>8` / `2>9` 四个类目分别拉取后合并去重。
 
+## 联系作者
+
+- 参赛者：**oracis**（robin）
+- 邮箱：**oracis@gmail.com** —— 比赛相关事务（评审、发奖、技术沟通）请直接邮件联系
+- 同批次参赛作品：麦麦暗号厨房 · https://github.com/oracis/mcd-secret-kitchen
+- 报名 Issue：[#1329](https://github.com/M-China/mcd-developer-innovation-challenge/issues/1329)
+
 ## 免责声明
 
 本项目是麦当劳程序员创意开发大赛参赛作品，由参赛者独立开发，**非麦当劳官方产品**。输出仅供参考，商品信息、积分规则与供应状态以麦当劳官方渠道实时结果为准。Token 仅从环境变量读取，不包含在任何文件中。
